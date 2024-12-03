@@ -1,0 +1,183 @@
+#include <iostream>
+#include <unordered_map>
+#include <vector>
+#include <queue>
+#include <limits>
+#include <set>
+#include <algorithm> // Include this for the reverse function
+
+using namespace std;
+
+// Graph representation using adjacency list
+class Graph {
+private:
+    unordered_map<string, vector<pair<string, int>>> adjList;
+    set<string> nodes;
+
+public:
+    // Add a directed edge with weight
+    void addEdge(const string& src, const string& dest, int weight) {
+        adjList[src].emplace_back(dest, weight);
+        nodes.insert(src);
+        nodes.insert(dest);
+    }
+
+    // Function to list all available cities
+    void listCities() const {
+        cout << "Available cities in the graph:\n";
+        for (const auto& city : nodes) {
+            cout << "- " << city << endl;
+        }
+    }
+
+    // Dijkstra's algorithm to find the shortest path
+    void shortestPath(const string& start, const string& end) {
+        unordered_map<string, int> distances;
+        unordered_map<string, string> previous;
+        for (const auto& node : nodes) distances[node] = numeric_limits<int>::max();
+        distances[start] = 0;
+
+        auto cmp = [&distances](const string& left, const string& right) {
+            return distances[left] > distances[right];
+        };
+        priority_queue<string, vector<string>, decltype(cmp)> pq(cmp);
+        pq.push(start);
+
+        while (!pq.empty()) {
+            string current = pq.top();
+            pq.pop();
+
+            if (current == end) break;
+
+            for (const auto& neighbor : adjList[current]) {
+                string nextCity = neighbor.first;
+                int edgeWeight = neighbor.second;
+                int newDist = distances[current] + edgeWeight;
+
+                if (newDist < distances[nextCity]) {
+                    distances[nextCity] = newDist;
+                    previous[nextCity] = current;
+                    pq.push(nextCity);
+                }
+            }
+        }
+
+        if (distances[end] == numeric_limits<int>::max()) {
+            cout << "No path exists from " << start << " to " << end << ".\n";
+            return;
+        }
+
+        // Print the shortest path
+        cout << "Shortest path from " << start << " to " << end << " is " << distances[end] << " units:\n";
+        vector<string> path;
+        for (string at = end; at != ""; at = previous[at]) path.push_back(at);
+        reverse(path.begin(), path.end());
+        for (const string& city : path) cout << city << " ";
+        cout << endl;
+    }
+
+    // Find all reachable cities within a certain distance
+    void reachableCities(const string& start, int maxDistance) {
+        unordered_map<string, int> distances;
+        for (const auto& node : nodes) distances[node] = numeric_limits<int>::max();
+        distances[start] = 0;
+
+        auto cmp = [&distances](const string& left, const string& right) {
+            return distances[left] > distances[right];
+        };
+        priority_queue<string, vector<string>, decltype(cmp)> pq(cmp);
+        pq.push(start);
+
+        while (!pq.empty()) {
+            string current = pq.top();
+            pq.pop();
+
+            for (const auto& neighbor : adjList[current]) {
+                string nextCity = neighbor.first;
+                int edgeWeight = neighbor.second;
+                int newDist = distances[current] + edgeWeight;
+
+                if (newDist < distances[nextCity]) {
+                    distances[nextCity] = newDist;
+                    pq.push(nextCity);
+                }
+            }
+        }
+
+        cout << "Cities reachable from " << start << " within " << maxDistance << " units:\n";
+        for (const auto& entry : distances) {
+            if (entry.second <= maxDistance && entry.second > 0) {
+                cout << entry.first << " (" << entry.second << " units)\n";
+            }
+        }
+    }
+
+    // Check for isolated cities
+    void findIsolatedCities() {
+        set<string> reachable;
+        for (const auto& src : adjList) {
+            for (const auto& dest : src.second) {
+                reachable.insert(dest.first);
+            }
+        }
+
+        cout << "Isolated cities (not reachable from any other city):\n";
+        for (const auto& city : nodes) {
+            if (reachable.find(city) == reachable.end() && adjList[city].empty()) {
+                cout << city << endl;
+            }
+        }
+    }
+};
+
+// Main function
+int main() {
+    Graph graph;
+
+    // Example graph setup
+    graph.addEdge("CityA", "CityB", 10);
+    graph.addEdge("CityA", "CityC", 20);
+    graph.addEdge("CityB", "CityD", 15);
+    graph.addEdge("CityD", "CityE", 30);
+    graph.addEdge("CityE", "CityF", 5);
+    graph.addEdge("CityC", "CityF", 25);
+
+    int choice;
+    while (true) {
+        cout << "\nTransportation Network Menu:\n";
+        cout << "1. List all available cities\n";
+        cout << "2. Find shortest path\n";
+        cout << "3. Find reachable cities within distance\n";
+        cout << "4. Find isolated cities\n";
+        cout << "5. Exit\n";
+        cout << "Enter your choice: ";
+        cin >> choice;
+
+        if (choice == 1) {
+            graph.listCities();
+        } else if (choice == 2) {
+            string start, end;
+            cout << "Enter start city: ";
+            cin >> start;
+            cout << "Enter end city: ";
+            cin >> end;
+            graph.shortestPath(start, end);
+        } else if (choice == 3) {
+            string start;
+            int maxDistance;
+            cout << "Enter start city: ";
+            cin >> start;
+            cout << "Enter maximum distance: ";
+            cin >> maxDistance;
+            graph.reachableCities(start, maxDistance);
+        } else if (choice == 4) {
+            graph.findIsolatedCities();
+        } else if (choice == 5) {
+            break;
+        } else {
+            cout << "Invalid choice. Try again.\n";
+        }
+    }
+
+    return 0;
+}
